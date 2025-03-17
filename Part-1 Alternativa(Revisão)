@@ -1,0 +1,31 @@
+#corrigido pelo chat
+
+# Importa o módulo do Active Directory
+Import-Module ActiveDirectory
+
+# Define o caminho do arquivo de usuários
+$usuariosArquivo = "C:\Users\52577710801\testes\usuarios.txt"
+
+# Lê o arquivo e processa os usuários
+Get-Content $usuariosArquivo | ForEach-Object {
+    # Divide cada linha no formato "Nome do Usuário;Departamento"
+    $usuarioDepartamento = $_ -split ";"
+    $usuario = $usuarioDepartamento[0].Trim()
+    $departamento = $usuarioDepartamento[1].Trim()
+
+    Write-Host "Processando usuário: $usuario no departamento: $departamento"
+
+    # Verifica se o departamento já existe como grupo
+    if (-not (Get-ADGroup -Filter "Name -eq '$departamento'" -ErrorAction SilentlyContinue)) {
+        Write-Host "Criando grupo: $departamento"
+        New-ADGroup -Name $departamento -GroupScope Global -GroupCategory Security -Path "CN=Users,DC=Araucárias,DC=org"
+    }
+
+    # Verifica se o usuário já existe no AD
+    $usuarioAD = Get-ADUser -Filter "SamAccountName -eq '$usuario'" -ErrorAction SilentlyContinue
+    if ($usuarioAD) {
+        Write-Host "Adicionando $usuario ao grupo $departamento"
+        Add-ADGroupMember -Identity $departamento -Members $usuarioAD.DistinguishedName
+    } else {
+        Write-Host "Usuário $usuario não encontrado no AD."
+    }
