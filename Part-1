@@ -1,0 +1,25 @@
+#Criação de grupo e distribuição de novos usuários 
+Import-Module ActiveDirectory
+
+$usuariosArquivo = "C:\Users\52577710801\testes\usuarios.txt"
+
+# Leitura do arquivo com os usuários e seus departamentos
+Get-Content $usuariosArquivo | ForEach-Object {
+    # Divide cada linha no formato "Nome do Usuário;Departamento"
+    $usuarioDepartamento = $_ -split ";"
+    $usuario = $usuarioDepartamento[0].Trim()
+    $departamento = $usuarioDepartamento[1].Trim()
+
+    # Verifica se o departamento já existe como grupo
+    if (-not (Get-ADGroup -Filter {Name -eq $departamento} -ErrorAction SilentlyContinue)) {
+        # Se o grupo de departamento não existir, cria-o
+        New-ADGroup -Name $departamento -GroupScope Global -GroupCategory Security -Path "CN=Users,DC=Araucárias,DC=org"
+    }
+
+    # Verifica se o usuário já existe no AD
+    $usuarioAD = Get-ADUser -Filter {SamAccountName -eq $usuario} -ErrorAction SilentlyContinue
+    if ($usuarioAD) {
+        # Adiciona o usuário ao grupo do departamento
+        Add-ADGroupMember -Identity $departamento -Members $usuarioAD.SamAccountName
+            }
+}
