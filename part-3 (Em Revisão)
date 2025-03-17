@@ -1,0 +1,36 @@
+# Definir caminhos dos arquivos
+$csvFile = "C:\caminho_para\usuarios_desligados.csv"
+$logFile = "C:\caminho_para\log_desativacao.txt"
+
+# Pergunta ao usuário se deseja desativar ou remover contas
+$acao = Read-Host "Digite 'D' para desativar ou 'R' para remover usuários"
+
+# Importar o CSV contendo os usuários desligados
+$usuarios = Import-Csv -Path $csvFile
+
+# Percorrer a lista de usuários e processar as contas no Active Directory
+foreach ($usuario in $usuarios) {
+    $nome = $usuario.usuario_desligado # Captura o nome do usuário do CSV
+    
+    # Verifica se o usuário existe no Active Directory
+    $adUser = Get-ADUser -Filter {SamAccountName -eq $nome} -ErrorAction SilentlyContinue
+    
+    if ($adUser) {
+        if ($acao -eq 'D') {
+            # Desativa a conta do usuário
+            Disable-ADAccount -Identity $adUser.SamAccountName
+            Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Usuário $nome desativado com sucesso."
+        } elseif ($acao -eq 'R') {
+            # Remove a conta do usuário
+            Remove-ADUser -Identity $adUser.SamAccountName -Confirm:$false
+            Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Usuário $nome removido com sucesso."
+        } else {
+            Write-Host "Opção inválida. Execute o script novamente e escolha 'D' ou 'R'."
+            break
+        }
+    } else {
+        Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] ERRO: Usuário $nome não encontrado no AD."
+    }
+}
+
+Write-Host "Processo concluído. Verifique o log em $logFile"
